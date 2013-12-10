@@ -231,3 +231,6 @@ Because you need to know if you're receiving a chunk or not and also the exact o
 
 ### Server response
 The server can respond to an upload with anything it wants. Upload success or failure is based on the http status of the response (200 = success, anything else = failure). You can access the server response from the serverResponse object that is an argument received by the promises callbacks
+
+##License
+This project is released under the "clone this repository and do whatever you want with it" license ;D
