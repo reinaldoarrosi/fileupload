@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>fileupload example</title>
+	<script src="jquery-1.10.2.min.js" type="text/javascript"></script>
+    <script src="moxie.min.js" type="text/javascript"></script>
+    <script src="fileupload.js" type="text/javascript"></script>
+</head>
+<body>
+	<p>
+	<h1>Basic</h1>
+	<button id="btnFilePicker1" type="button">Choose file and upload</button>
+	</p>
+	
+	<p>
+	<h1>Multiple selection of images</h1>
+	<button id="btnFilePicker2" type="button">Choose file and upload</button>
+	</p>
+    
+	<p>
+	<h1>Basic queue with image preview</h1>
+	<button id="btnFilePicker3" type="button">Choose file and add to queue</button>
+	<button id="btnUpload1" type="button">Upload queue</button>
+	<ul id="fileList"></ul>
+	</p>
+	
+	<p>
+	<h1>All queue events</h1>
+	<button id="btnFilePicker4" type="button">Choose file and add to queue</button>
+	<button id="btnUpload2" type="button">Upload queue</button>
+	<button id="btnClearQueue" type="button">clear queue</button>
+	</p>
+	
+	<script type="text/javascript">
+		$(function() {
+			fileupload.setFlashRuntimePath('Moxie.swf');
+		
+			// Basic
+			$('#btnFilePicker1').fileInput().on('change', function(e, files) {
+				for(var i = 0; i < files.length; i++)
+					files[i].upload('example.html');
+			});
+			
+			
+			// Multiple selection of images
+			$('#btnFilePicker2').fileInput({
+				multiple: true,
+				accept: [{title: 'Images', extensions:'jpg,png,bmp'}]
+			}).on('change', function(e, files) {
+				for(var i = 0; i < files.length; i++)
+					files[i].upload('example.html');
+			});
+
+
+			// Basic queue with image preview
+			var queue = new fileupload.uploadQueue();
+			queue.on('fileAdded', function(e, item) {
+				item.file.generatePreview().always(function(status, preview) {
+					if(status === 'success' && preview.indexOf('data:image/') > -1)
+						$('#fileList').append('<li><img src="' + preview + '" style="width: 100px; height: 100px" />' + item.key + '</li>');
+					else if(status !== 'aborted' && status !== 'error')
+						$('#fileList').append('<li>' + item.key + '</li>');
+					else
+						alert('Error');
+				});
+			});
+			
+			$('#btnFilePicker3').fileInput({
+				accept: [{title: 'Images', extensions:'jpg,png,bmp'}]
+			}).on('change', function(e, files) {
+				for(var i = 0; i < files.length; i++) {
+					var file = files[i];
+					queue.addFile(file.name, file);
+				}
+			});
+			
+			$('#btnUpload1').click(function() {
+				queue.upload('example.html');
+			});
+			
+			// All queue events
+			var queue2 = new fileupload.uploadQueue();
+			queue2.on('uploadStarted uploadProgress uploadFinished fileAdded fileRemoved fileSent fileProgress fileDone fileFailed fileFinished', function(e) {
+				console.log(e.type);
+			});
+			
+			$('#btnFilePicker4').fileInput().on('change', function(e, files) {
+				for(var i = 0; i < files.length; i++) {
+					var file = files[i];
+					queue2.addFile(file.name, file);
+				}
+			});
+			
+			$('#btnUpload2').click(function() {
+				queue2.upload('example.html');
+			});
+			
+			$('#btnClearQueue').click(function() {
+				queue2.removeAll();
+			});
+		});
+	</script>
+</body>
+</html>
