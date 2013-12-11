@@ -97,8 +97,10 @@ __Returns__: a PROMISE where callbacks can be attached<br>
 This method __will fail__ if the file is bigger than 5MB
 
 ## jQuery.fileinput([options])
-This is the jQuery plugin that can be used to transform any DOM element into a 'button' that when clicked will open a file selection dialog (like an input type="file"). Usage is similar to other jQuery plugins:
-    
+This is the jQuery plugin that can be used to transform any DOM element into a 'button' that when clicked will open a file selection dialog (like an input type="file").<br>
+Moxie creates an element on top of the real element to be able to open file selection dialogs when a click happens. This can make some browser lose the ability to style :hover and :active css. To make it easier to deal with this scenario the 'hover' and 'pressed' css classes is added/removed to the element accordingly. <br>
+Usage is similar to other jQuery plugins:
+   
     ...
     <button type="button" id="btnFilePicker">Choose a file...</button>
     ...
