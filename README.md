@@ -92,9 +92,17 @@ Cancels the upload<br>
 __Returns__: nothing
 
 ####generatePreview()
-Try to generate a preview of the file by reading it into a dataURL format.<br>
-__Returns__: a PROMISE where callbacks can be attached<br>
+Try to generate a preview of the file by creating using createObjectURL. If createObjectURL is not supported, try to generate the preview reading the file into a dataURL format.<br>
 This method __will fail__ if the file is bigger than 5MB
+__Returns__: a PROMISE where callbacks can be attached<br>
+
+__promise callbacks__<br>
+_progress_ = function(progress)
+- progress: an object with total and loaded properties representing the upload progress (see progress status)
+
+_done, fail and always_ = function(status, preview)
+- status: either 'success', 'error' or 'aborted' depending on what happened during loading the file
+- preview: a String object that represents either the URLObject or dataURL. This String has a release method used to release resources used by the preview (this method has effect only when the preview is a URLObject and is the same as calling _window.URL.revokeObjectURL_)
 
 ## jQuery.fileinput([options])
 This is the jQuery plugin that can be used to transform any DOM element into a 'button' that when clicked will open a file selection dialog (like an input type="file").<br>

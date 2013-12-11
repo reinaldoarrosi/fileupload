@@ -26,18 +26,31 @@
         };
 
         function generatePreview() {
+			var self = this;
             var promise = $.Deferred();
-
-            if (this.size > (1024 * 1024 * 5)) {
+			var objectURL = window.URL || window.webkitURL;
+			
+			if (self.size > (1024 * 1024 * 5)) {
                 promise.reject('maxSize');
-            } else {
+            } else if(objectURL && self.getSource) {
+				setTimeout(function() {
+					var preview = new String(objectURL.createObjectURL(self.getSource()));
+					preview.release = function() { objectURL.revokeObjectURL(this); };
+					promise.resolve('success', preview);
+				}, 1);
+			} else {
                 var reader = new mOxie.FileReader();
 
                 reader.onabort = function () { promise.reject('aborted'); };
                 reader.onerror = function () { promise.reject('error', reader.error); };
-                reader.onload = function () { promise.resolve('success', reader.result); };
                 reader.onprogress = function (e) { promise.notify(e); };
-                reader.readAsDataURL(this);
+				reader.onload = function () { 
+					var preview = new String(reader.result);
+					preview.release = function() { };
+					promise.resolve('success', preview); 
+				};
+				
+                reader.readAsDataURL(self);
             }
 
             return promise.promise();
