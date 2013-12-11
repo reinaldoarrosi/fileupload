@@ -431,19 +431,19 @@
 
     $.fn.fileInput = function (options) {
         this.each(function () {
-            var element = this;
+            var element = $(this);
 
             var o = $.extend({}, options);
             o.browse_button = this;
 
             var self = new mOxie.FileInput(o);
-            self.onready = function (e) { $(element).trigger('ready', e); };
-            self.onrefresh = function (e) { $(element).trigger('refresh', e); };
+            self.onready = function (e) { element.trigger('ready', e); };
+            self.onrefresh = function (e) { element.trigger('refresh', e); };
             self.onchange = changed;
-            self.onmouseenter = function (e) { $(element).trigger('mouseenter', e); };
-            self.onmouseleave = function (e) { $(element).trigger('mouseleave', e); };
-            self.onmousedown = function (e) { $(element).trigger('mousedown', e); };
-            self.onmouseup = function (e) { $(element).trigger('mouseup', e); };
+            self.onmouseenter = mouseEnter;
+            self.onmouseleave = mouseLeave;
+            self.onmousedown = mouseDown;
+            self.onmouseup = mouseUp;
 
             self.init();
 
@@ -452,8 +452,28 @@
                     fileupload.fileEx(e.target.files[i]);
                 }
 
-                $(element).trigger('change', [e.target.files]);
+                element.trigger('change', [e.target.files]);
             }
+			
+			function mouseEnter(e) { 
+				element.addClass('hover');
+				element.trigger('mouseenter', e); 
+			}
+			
+			function mouseLeave(e) { 
+				element.removeClass('hover');
+				element.trigger('mouseleave', e); 
+			}
+			
+			function mouseDown(e) { 
+				element.addClass('pressed');
+				element.trigger('mousedown', e); 
+			}
+			
+			function mouseUp(e) { 
+				element.removeClass('pressed');
+				element.trigger('mouseup', e); 
+			}
         });
 
         return this;

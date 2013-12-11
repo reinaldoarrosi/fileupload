@@ -432,7 +432,6 @@
     $.fn.fileInput = function (options) {
         this.each(function () {
             var element = $(this);
-			var 
 
             var o = $.extend({}, options);
             o.browse_button = this;
