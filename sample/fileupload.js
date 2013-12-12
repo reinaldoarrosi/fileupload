@@ -68,7 +68,7 @@
 				};
 				
 				reader.readAsDataURL(self);
-				setTimeout(function() { promise.reject('error'); }, 10000);
+				setTimeout(function() { promise.reject('aborted'); }, 10000);
             }
 
             return promise.promise();
@@ -96,7 +96,7 @@
 				promise.resolve(dataUrl);
 			});
 			
-			setTimeout(function() { promise.reject('error'); }, 10000);
+			setTimeout(function() { promise.reject('aborted'); }, 10000);
 			return promise.promise();
 		}
 

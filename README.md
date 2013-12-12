@@ -93,7 +93,8 @@ __Returns__: nothing
 
 ####generatePreview()
 Try to generate a preview of the file by creating using createObjectURL. If createObjectURL is not supported, try to generate the preview reading the file into a dataURL format.<br>
-This method __will fail__ if the file is bigger than 5MB
+__IMPORTANT__: If createObjectURL is not supported previews won't be generated for files bigger than 7MB. Video previews also depend on createObjectURL being supported by the browser.<br>
+If previews does not finish generating within 10 seconds the promise will be rejected with status 'aborted'.
 __Returns__: a PROMISE where callbacks can be attached<br>
 
 __promise callbacks__<br>
