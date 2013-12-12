@@ -29,32 +29,76 @@
 			var self = this;
             var promise = $.Deferred();
 			var objectURL = window.URL || window.webkitURL;
+			var type = (self.type.indexOf('image/') === 0 ? 'image' : (self.type.indexOf('video/') === 0 ? 'video' : null));
 			
-			if (self.size > (1024 * 1024 * 5)) {
-                promise.reject('maxSize');
-            } else if(objectURL && self.getSource) {
-				setTimeout(function() {
+			if(!type) {
+				promise.reject('error');
+			} else if(objectURL && self.getSource) {
+				setTimeout(function() {					
 					var preview = new String(objectURL.createObjectURL(self.getSource()));
 					preview.release = function() { objectURL.revokeObjectURL(this); };
-					promise.resolve('success', preview);
+					
+					if(type === 'video') {
+						generateVideoPoster(preview).done(function(preview) {
+							if(preview)
+								promise.resolve('success', preview);
+							else
+								promise.reject('error');
+						}).fail(function() {
+							promise.reject('error');
+						});
+					} else {
+						promise.resolve('success', preview);
+					}
 				}, 1);
+			} else if (self.size > (1024 * 1024 * 7)) {
+                promise.reject('maxSize');
+			} else if(type === 'video') {
+				promise.reject('error');
 			} else {
-                var reader = new mOxie.FileReader();
+				var reader = new mOxie.FileReader();
 
-                reader.onabort = function () { promise.reject('aborted'); };
-                reader.onerror = function () { promise.reject('error', reader.error); };
-                reader.onprogress = function (e) { promise.notify(e); };
+				reader.onabort = function () { promise.reject('aborted'); };
+				reader.onerror = function () { promise.reject('error', reader.error); };
+				reader.onprogress = function (e) { promise.notify(e); };
 				reader.onload = function () { 
 					var preview = new String(reader.result);
 					preview.release = function() { };
-					promise.resolve('success', preview); 
+					promise.resolve('success', preview);
 				};
 				
-                reader.readAsDataURL(self);
+				reader.readAsDataURL(self);
+				setTimeout(function() { promise.reject('error'); }, 10000);
             }
 
             return promise.promise();
         }
+		
+		function generateVideoPoster(preview) {
+			var canvas = document.createElement('canvas');
+			var context = (canvas.getContext && canvas.getContext('2d'));
+			if(!context) return null;
+			
+			var video = document.createElement('video');
+			if(!video.canPlayType) return null;
+			
+			var promise = $.Deferred();
+			
+			video.src = preview;
+			video.addEventListener('loadeddata', function() {
+				canvas.width = video.videoWidth;
+				canvas.height = video.videoHeight;
+				context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+
+				var dataUrl = new String(context.canvas.toDataURL('image/png'));
+				dataUrl.release = function() { };
+				
+				promise.resolve(dataUrl);
+			});
+			
+			setTimeout(function() { promise.reject('error'); }, 10000);
+			return promise.promise();
+		}
 
         function makeUpload(url, file, options) {
             var promise;

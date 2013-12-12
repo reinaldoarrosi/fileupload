@@ -3,7 +3,7 @@
 <head>
     <title>fileupload example</title>
 	<script src="jquery-1.10.2.min.js" type="text/javascript"></script>
-    <script src="moxie.min.js" type="text/javascript"></script>
+    <script src="moxie.js" type="text/javascript"></script>
     <script src="fileupload.js" type="text/javascript"></script>
 </head>
 <body>
@@ -56,12 +56,14 @@
 			var queue = new fileupload.uploadQueue();
 			queue.on('fileAdded', function(e, item) {
 				item.file.generatePreview().always(function(status, preview) {
-					if(status === 'success' && preview.indexOf('data:image/') > -1)
+					if(status === 'success') {
 						$('#fileList').append('<li><img src="' + preview + '" style="width: 100px; height: 100px" />' + item.key + '</li>');
-					else if(status !== 'aborted' && status !== 'error')
+						preview.release();
+					} else if(status !== 'aborted' && status !== 'error') {
 						$('#fileList').append('<li>' + item.key + '</li>');
-					else
+					} else {
 						alert('Error');
+					}
 				});
 			});
 			
