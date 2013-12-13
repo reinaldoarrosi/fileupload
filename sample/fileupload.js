@@ -31,7 +31,7 @@
 			var objectURL = window.URL || window.webkitURL;
 			var type = (self.type.indexOf('image/') === 0 ? 'image' : (self.type.indexOf('video/') === 0 ? 'video' : null));
 			
-			if(!type) {
+			if(!objectURL || !type) {
 				promise.reject('error');
 			} else if(objectURL && self.getSource) {
 				setTimeout(function() {					
@@ -51,26 +51,8 @@
 						promise.resolve('success', preview);
 					}
 				}, 1);
-			} else if (self.size > (1024 * 1024 * 7)) {
-                promise.reject('maxSize');
-			} else if(type === 'video') {
-				promise.reject('error');
-			} else {
-				var reader = new mOxie.FileReader();
-
-				reader.onabort = function () { promise.reject('aborted'); };
-				reader.onerror = function () { promise.reject('error', reader.error); };
-				reader.onprogress = function (e) { promise.notify(e); };
-				reader.onload = function () { 
-					var preview = new String(reader.result);
-					preview.release = function() { };
-					promise.resolve('success', preview);
-				};
-				
-				reader.readAsDataURL(self);
-				setTimeout(function() { promise.reject('aborted'); }, 10000);
-            }
-
+			}
+			
             return promise.promise();
         }
 		
