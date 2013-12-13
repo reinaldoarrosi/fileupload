@@ -55,16 +55,19 @@
 			// Basic queue with image preview
 			var queue = new fileupload.uploadQueue();
 			queue.on('fileAdded', function(e, item) {
-				var listItem = $('<li>' + item.key + '</li>');
-				$('#fileList').append(listItem);
-			
-				item.file.generatePreview().done(function(status, preview) {
-					listItem.prepend('<img src="' + preview + '" style="width: 100px; height: 100px" />');
+				item.file.generatePreview().always(function(status, preview) {
+					if(status === 'success') {
+						$('#fileList').append('<li><img src="' + preview + '" style="width: 100px; height: 100px" />' + item.key + '</li>');
+						preview.release();
+					} else if(status !== 'aborted' && status !== 'error') {
+						$('#fileList').append('<li>' + item.key + '</li>');
+					} else {
+						alert('Error');
+					}
 				});
 			});
 			
 			$('#btnFilePicker3').fileInput({
-				multiple: true,
 				accept: [{title: 'Images', extensions:'jpg,png,bmp'}]
 			}).on('change', function(e, files) {
 				for(var i = 0; i < files.length; i++) {

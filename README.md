@@ -92,8 +92,8 @@ Cancels the upload<br>
 __Returns__: nothing
 
 ####generatePreview()
-Try to generate a preview of the file by creating using window.URL.createObjectURL. <br>
-__IMPORTANT__: If createObjectURL is not supported previews won't be generated and the promise will be rejected with status 'error'.<br>
+Try to generate a preview of the file by creating using createObjectURL. If createObjectURL is not supported, try to generate the preview reading the file into a dataURL format.<br>
+__IMPORTANT__: If createObjectURL is not supported previews won't be generated for files bigger than 7MB. Video previews also depend on createObjectURL being supported by the browser.<br>
 If previews does not finish generating within 10 seconds the promise will be rejected with status 'aborted'.
 __Returns__: a PROMISE where callbacks can be attached<br>
 
@@ -102,7 +102,7 @@ _progress_ = function(progress)
 - progress: an object with total and loaded properties representing the upload progress (see progress status)
 
 _done, fail and always_ = function(status, preview)
-- status: either 'success', 'error' or 'aborted' depending on what happened during generation.
+- status: either 'success', 'error' or 'aborted' depending on what happened during loading the file
 - preview: a String object that represents either the URLObject or dataURL. This String has a release method used to release resources used by the preview (this method has effect only when the preview is a URLObject and is the same as calling _window.URL.revokeObjectURL_)
 
 ## jQuery.fileinput([options])
