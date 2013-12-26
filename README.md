@@ -37,13 +37,14 @@ There you'll find a sample page with all the references already in place and com
 There is also an ASP.NET server-side upload handler implementation in src/server/AspNet.FileUploadHandler.cs<br>
 
 ##Components
-This project contains 3 distinct components that are build on top of moxie and jQuery
-- A function called fileupload.FileEx that adds 3 new methods (upload, abort, generatePreview) to the mOxie.File class
-- A jQuery plugin to create a file picker 'button' that allows the user to select files to upload (depends on fileupload.FileEx)
+This project contains 4 distinct components that are build on top of moxie and jQuery
+- An extension to the mOxie.File class that adds 3 new methods (upload, abort, generatePreview)
+- A fileupload.FakeFile class that mimics the mOxie.File class through noops mehtods. This is useful for representing files that are on the server.
+- A jQuery plugin to create a file picker 'button' that allows the user to select files to upload (depends on fileupload mOxie.File extensions)
 - A fileupload.uploadQueue class to create an upload queue that can manage uploading multiple files and reporting upload progress, completion, failure, etc...
 
-## fileupload.FileEx(file)
-This functions receives a file (HTML API File or mOxie.File) and ADDS 3 methods to the file instance:
+## mOxie.File extensions
+These are the 3 methods that are added to the mOxie.File class:
 ####upload(url, [options])
 Uploads the file to the given _url_<br>
 __Returns__: a PROMISE where callbacks can be attached<br>
@@ -105,6 +106,37 @@ _done, fail and always_ = function(status, preview)
 - status: either 'success', 'error' or 'aborted' depending on what happened during generation.
 - preview: a String object that represents either the URLObject or dataURL. This String has a release method used to release resources used by the preview (this method has effect only when the preview is a URLObject and is the same as calling _window.URL.revokeObjectURL_)
 
+## fileupload.FakeFile
+This is a class that can be used to represent files that are on the server. To instantiate it you'll need to pass the path to the file that is being represented and, optionally, the generatePreview function.
+
+    var fakeFileNoPreview = new fileupload.FakeFile('path\to\my\file.png');
+    var fakeFilePreview = new fileupload.FakeFile('path\to\my\file.png', sampleGeneratePreviewForFakeFileFunction);
+    
+    function sampleGeneratePreviewForFakeFileFunction() {
+        var r = $.Deferred();
+        r.resolve('success', 'GetPreviewFromServer.aspx?path=' + this.path);
+        return r.promise();
+    }
+    
+The fake file has the following properties and methods:
+####name
+This is the name of the file. It will NOT contain the full path, just the name of the file.
+####size
+This will always be 0 (zero)
+####isFake
+This will always be true. This can be used to differentiate between a real mOxie.File and the fileupload.FakeFile
+####path
+This will be the complete path to the file as passed in the first parameter for the constructor
+####upload()
+This is a noop method just to keep interface compatibility between the mOxie.File and the fileupload.FakeFile
+####abort()
+This is a noop method just to keep interface compatibility between the mOxie.File and the fileupload.FakeFile
+####generatePreview()
+By default this will return a rejected promise with status 'aborted'. If you want you can pass in your own generatePreview function in the constructor. This custom function MUST return a promise that: 
+- if preview is generated the promise must be resolved with status 'success' and the url of the preview
+- if an error occurs the promise must be rejected with status 'error'
+- if preview generation is cancelled the promise must be rejected with status 'aborted'
+
 ## jQuery.fileinput([options])
 This is the jQuery plugin that can be used to transform any DOM element into a 'button' that when clicked will open a file selection dialog (like an input type="file").<br>
 Moxie creates an element on top of the real element to be able to open file selection dialogs when a click happens. This can make some browser lose the ability to style :hover and :active css. To make it easier to deal with this scenario the 'hover' and 'pressed' css classes is added/removed to the element accordingly. <br>
@@ -132,7 +164,7 @@ To subscribe to events use jQuery's .on method
 <table>
 <tr><th>event</th><th>description</th><th>arguments</th></tr>
 <tr><td>ready(e)</td><td>triggered when the file input is ready to be used</td><td>e = event info</td></tr>
-<tr><td>change(e, f)</td><td>triggered when a file selection is made</td><td>e = event info<br>f = selected files array (these files are pre-processed by fileupload.FileEx so they already have the 3 additional methods explained earlier)</td></tr>
+<tr><td>change(e, f)</td><td>triggered when a file selection is made</td><td>e = event info<br>f = selected files array </td></tr>
 <tr><td>mouseenter(e)</td><td>triggered when the mouse cursor hover over the file picker</td><td>e = event info</td></tr>
 <tr><td>mouseleave(e)</td><td>triggered when the mouse cursor stops hovering over the file picker</td><td>e = event info</td></tr>
 <tr><td>mousedown(e)</td><td>triggered when the mouse buton is pressed over the file picker</td><td>e = event info</td></tr>
@@ -145,13 +177,13 @@ This class can be used to control uploading multiple files to the server.
 <table>
 <tr><th>options</th><th>description</th><th>default</th></tr>
 <tr><td>url(string)</td><td>default url to use when uploading files</td><td>null (no default URL)</td></tr>
-<tr><td>extras(object)</td><td>object in a 'key-value' format that will be sent to the server for EVERY file being uploaded by the uploadQueue. see fileupload.FileEx.upload parameters for more info</td></tr>
+<tr><td>extras(object)</td><td>object in a 'key-value' format that will be sent to the server for EVERY file being uploaded by the uploadQueue. see mOxie.File extensions _upload_ method parameters for more info</td></tr>
 </table>
 
 ###methods
 
 ####addFile(key, file, [options])
-Adds a file to the queue. Parameter 'options' is the same as the one used in fileupload.FileEx.upload method.<br>
+Adds a file to the queue. Parameter 'options' is the same as the one used in mOxie.File extensions _upload_ method.<br>
 __Returns__: nothing
 
 ####removeFile(key)
@@ -202,7 +234,7 @@ To subscribe and unsubscribe to events use queue.on and queue.off. The syntax is
 <tr><td>fileRemoved(e, i)</td><td>triggered when a file is removed from the queue</td><td>e = event info<br>i = queue item (see below)</td></tr>
 <tr><td>uploadStarted(e)</td><td>triggered when queue starts uploading</td><td>e = event info</td></tr>
 <tr><td>uploadProgress(e, p)</td><td>triggered to indicate queue progress (this is the general progress, for file-specific progress see fileProgress)</td><td>e = event info<br>p = progress status (see below)</td></tr>
-<tr><td>uploadFinished(e)</td><td>triggered when queue finishes uploading</td><td>e = event info</td></tr>
+<tr><td>uploadFinished(e, s)</td><td>triggered when queue finishes uploading</td><td>e = event info<br>s = upload status (see below)</td></tr>
 <tr><td>fileSent(e, i)</td><td>triggered when a file starts uploading</td><td>e = event info<br>i = queue item (see below)</td></tr>
 <tr><td>fileProgress(e, p, i)</td><td>triggered to indicate file upload progress</td><td>e = event info<br>p = progress status (see below)<br>i = queue item (see below)</td></tr>
 <tr><td>fileDone(e, i)</td><td>triggered when a file was successfully uploaded</td><td>e = event info<br>i = queue item (see below)</td></tr>
@@ -220,6 +252,12 @@ The queue item represents a file that has been enqueued and has the following pr
 The progress status has the following properties:
 - total: the total size that will be uploaded in bytes
 - loaded: the amount of bytes that were already uploaded
+
+####upload status
+The upload status has the following properties:
+- total: total number of files that were sent to the server
+- success: number of files that were uploaded successfuly
+- error: number of files that were NOT uploaded sucessfuly
 
 ##Server-side upload handler
 When you upload file to the server some extra information goes along with the file itself so that you can handle partial uploads (chunking).

@@ -1,8 +1,9 @@
-﻿(function ($) {
+(function ($) {
     var fu = window.fileupload || {};
     window.fileupload = fu;
+    fu.File = mOxie.File; // alias to mOxie.File
 
-    fu.fileEx = (function () {
+    (function () {
         function upload(url, options) {
             var o = $.extend({
                 key: this.name,
@@ -26,61 +27,62 @@
         };
 
         function generatePreview() {
-			var self = this;
+            var self = this;
             var promise = $.Deferred();
-			var objectURL = window.URL || window.webkitURL;
-			var type = (self.type.indexOf('image/') === 0 ? 'image' : (self.type.indexOf('video/') === 0 ? 'video' : null));
-			
-			if(!objectURL || !type) {
-				promise.reject('error');
-			} else if(objectURL && self.getSource) {
-				setTimeout(function() {					
-					var preview = new String(objectURL.createObjectURL(self.getSource()));
-					preview.release = function() { objectURL.revokeObjectURL(this); };
-					
-					if(type === 'video') {
-						generateVideoPoster(preview).done(function(preview) {
-							if(preview)
-								promise.resolve('success', preview);
-							else
-								promise.reject('error');
-						}).fail(function() {
-							promise.reject('error');
-						});
-					} else {
-						promise.resolve('success', preview);
-					}
-				}, 1);
-			}
-			
+            var objectURL = window.URL || window.webkitURL;
+            var type = (self.type.indexOf('image/') === 0 ? 'image' : (self.type.indexOf('video/') === 0 ? 'video' : null));
+
+            if (!objectURL || !type) {
+                promise.reject('error');
+            } else if (objectURL && self.getSource) {
+                setTimeout(function () {
+                    var preview = new String(objectURL.createObjectURL(self.getSource()));
+                    preview.release = function () { objectURL.revokeObjectURL(this); };
+
+                    if (type === 'video') {
+                        generateVideoPoster(preview).done(function (preview) {
+                            if (preview)
+                                promise.resolve('success', preview);
+                            else
+                                promise.reject('error');
+                        }).fail(function () {
+                            promise.reject('error');
+                        });
+                    } else {
+                        promise.resolve('success', preview);
+                    }
+                }, 1);
+            }
+
             return promise.promise();
         }
-		
-		function generateVideoPoster(preview) {
-			var canvas = document.createElement('canvas');
-			var context = (canvas.getContext && canvas.getContext('2d'));
-			if(!context) return null;
-			
-			var video = document.createElement('video');
-			if(!video.canPlayType) return null;
-			
-			var promise = $.Deferred();
-			
-			video.src = preview;
-			video.addEventListener('loadeddata', function() {
-				canvas.width = video.videoWidth;
-				canvas.height = video.videoHeight;
-				context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
 
-				var dataUrl = new String(context.canvas.toDataURL('image/png'));
-				dataUrl.release = function() { };
-				
-				promise.resolve(dataUrl);
-			});
-			
-			setTimeout(function() { promise.reject('aborted'); }, 10000);
-			return promise.promise();
-		}
+        function generateVideoPoster(preview) {
+            var canvas = document.createElement('canvas');
+            var context = (canvas.getContext && canvas.getContext('2d'));
+            if (!context) return null;
+
+            var video = document.createElement('video');
+            if (!video.canPlayType) return null;
+
+            var promise = $.Deferred();
+
+            video.src = preview;
+            video.addEventListener('loadeddata', function () {
+                var ratio = video.videoWidth / video.videoHeight;
+                canvas.width = 100;
+                canvas.height = 100 / ratio;
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                var dataUrl = new String(context.canvas.toDataURL('image/png'));
+                dataUrl.release = function () { };
+
+                promise.resolve(dataUrl);
+            });
+
+            setTimeout(function () { promise.reject('aborted'); }, 10000);
+            return promise.promise();
+        }
 
         function makeUpload(url, file, options) {
             var promise;
@@ -198,19 +200,44 @@
             return formData;
         }
 
-        return function (file) {
-            file.upload = upload;
-            file.abort = abort;
-            file.generatePreview = generatePreview;
-            return file;
-        };
+        mOxie.File.prototype.upload = upload;
+        mOxie.File.prototype.abort = abort;
+        mOxie.File.prototype.generatePreview = generatePreview;
     } ());
+
+    fu.FakeFile = function (path, previewCallback) {
+        var self = this;
+        var split = path.split('\\');
+        split = split[split.length - 1].split('/');
+
+        this.name = split[split.length - 1];
+        this.size = 0;
+        this.isFake = true;
+        this.path = path;
+
+        this.upload = function (url, options) {
+            var uid = mOxie.guid();
+            var args = { uid: uid, url: url, file: self, options: options, chunk: 0, totalChunks: 0 };
+
+            var r = $.Deferred();
+            r.resolve({}, args);
+            return r.promise();
+        };
+
+        this.abort = function () { };
+        this.generatePreview = previewCallback || function () {
+            var r = $.Deferred();
+            r.reject('aborted');
+            return r.promise();
+        };
+    };
 
     fu.uploadQueue = function (options) {
         var self = this;
         var queue = {};
         var publicQueue = null;
         var status = 'waiting';
+        var result = { total: 0, success: 0, error: 0 };
 
         self.options = $.extend({}, options);
 
@@ -314,11 +341,13 @@
 
             $(self).trigger('uploadStarted');
             status = 'uploading';
+            result = { total: 0, success: 0, error: 0 };
 
             if (key && queue[key]) {
                 var item = queue[key];
 
                 if (item.status === 'waiting') {
+                    result.total += 1;
                     uploadProgress.total += item.file.size;
 
                     promise = item.file.upload(url || self.options.url, item.options);
@@ -334,6 +363,7 @@
                     var item = queue[key];
 
                     if (item.status === 'waiting') {
+                        result.total += 1;
                         uploadProgress.total += item.file.size;
 
                         promise = item.file.upload(url || self.options.url, item.options);
@@ -404,6 +434,7 @@
                 delete queue[args.options.key];
                 publicQueue = null;
 
+                result.error += 1;
                 $(self).trigger('fileFailed', item);
             });
 
@@ -412,6 +443,7 @@
                 delete queue[args.options.key];
                 publicQueue = null;
 
+                result.success += 1;
                 $(self).trigger('fileDone', item);
             });
 
@@ -425,9 +457,10 @@
             promise.always(function () {
                 progress.loaded = progress.total;
                 $(self).trigger('uploadProgress', progress);
-                $(self).trigger('uploadFinished');
+                $(self).trigger('uploadFinished', result);
 
                 status = 'waiting';
+                result = { total: 0, success: 0, error: 0 };
             });
 
             promise.progress(function () {
@@ -468,12 +501,30 @@
         mOxie.Env.swf_url = path;
     };
 
-    $.fn.fileInput = function (options) {
+    $.fn.fileInput = function () {
+        var args = Array.prototype.slice.call(arguments);
+
         this.each(function () {
-            var element = $(this);
+            if (args.length == 0) {
+                init($(this), {});
+            } else if (args.length > 0) {
+                if (typeof args[0] === 'object') {
+                    init($(this), args[0]);
+                } else if (typeof args[0] === 'string') {
+                    var fileInput = $(this).data('fileInput');
+
+                    if (fileInput && fileInput[args[0]])
+                        fileInput[args[0]].apply(fileInput, args.slice(1));
+                }
+            }
+        });
+
+        function init(element, options) {
+            if (element.data('fileInput'))
+                return;
 
             var o = $.extend({}, options);
-            o.browse_button = this;
+            o.browse_button = element[0];
 
             var self = new mOxie.FileInput(o);
             self.onready = function (e) { element.trigger('ready', e); };
@@ -483,37 +534,47 @@
             self.onmouseleave = mouseLeave;
             self.onmousedown = mouseDown;
             self.onmouseup = mouseUp;
+            self.destroy = destroy;
 
             self.init();
+            element.data('fileInput', self);
+
+            function destroy() {
+                element.removeData('fileInput');
+            }
 
             function changed(e) {
-                for (var i = 0; i < e.target.files.length; i++) {
-                    fileupload.fileEx(e.target.files[i]);
-                }
-
                 element.trigger('change', [e.target.files]);
             }
-			
-			function mouseEnter(e) { 
-				element.addClass('hover');
-				element.trigger('mouseenter', e); 
-			}
-			
-			function mouseLeave(e) { 
-				element.removeClass('hover');
-				element.trigger('mouseleave', e); 
-			}
-			
-			function mouseDown(e) { 
-				element.addClass('pressed');
-				element.trigger('mousedown', e); 
-			}
-			
-			function mouseUp(e) { 
-				element.removeClass('pressed');
-				element.trigger('mouseup', e); 
-			}
-        });
+
+            function mouseEnter(e) {
+                if (o.hoverCss)
+                    element.addClass(o.hoverCss);
+
+                element.trigger('mouseenter', e);
+            }
+
+            function mouseLeave(e) {
+                if (o.hoverCss)
+                    element.removeClass(o.hoverCss);
+
+                element.trigger('mouseleave', e);
+            }
+
+            function mouseDown(e) {
+                if (o.pressedCss)
+                    element.addClass(o.pressedCss);
+
+                element.trigger('mousedown', e);
+            }
+
+            function mouseUp(e) {
+                if (o.pressedCss)
+                    element.removeClass(o.pressedCss);
+
+                element.trigger('mouseup', e);
+            }
+        }
 
         return this;
     };

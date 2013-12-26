@@ -106,9 +106,9 @@ namespace AspNet
             }
 
             DirectoryInfo d = new DirectoryInfo(PartialPath);
-            var files = d.EnumerateFiles("*" + partialFileName).OrderBy(f => f.Name);
+            var files = d.EnumerateFiles("*" + partialFileName).OrderBy(f => Convert.ToInt32(f.Name.Split('_')[0].Replace("C", "")));
             var size = files.Sum(f => f.Length);
-            bool allChunksReceived = size == totalChunks;
+            bool allChunksReceived = file.Count() == totalChunks;
 
             if (!allChunksReceived)
             {
